@@ -5,19 +5,31 @@ import json
 from flask_restx import Namespace, Resource
 from flask import session, request, url_for, redirect
 from google_auth_oauthlib.flow import Flow
+import common.encoder
 
-SCOPES = ['https://www.googleapis.com/auth/photoslibrary.readonly','https://www.googleapis.com/auth/gmail.readonly','https://www.googleapis.com/auth/drive.readonly']
+GOOGLE_SCOPES = ['https://www.googleapis.com/auth/photoslibrary.readonly', \
+                 'https://www.googleapis.com/auth/gmail.readonly', \
+                 'https://www.googleapis.com/auth/drive.readonly']
 
 
-def get_credentials(scopes):
-    if 'credentials' in session and session['credentials'] is not None:
-        print('using credentials found in session')
-        session['credentials']['scopes'] = scopes
-        return google.oauth2.credentials.Credentials(**session['credentials'])
+def get_config_from_secret():
+    config_js = None
+    if config_str := os.getenv('GOOGLE_CLIENT_SECRET_BASE64', None):
+        config_str = common.encoder.decode(config_str)
+        config_js = json.loads(config_str)
+    return config_js
 
-    elif refresh_token := get_refresh_token():
-        if client_config_str := os.getenv('GOOGLE_CLIENT_SECRET', None):
-            client_config = json.loads(client_config_str)
+def get_credentials(scopes=GOOGLE_SCOPES):
+    try:
+        if 'credentials' in session and session['credentials'] is not None:
+            print('using credentials found in session')
+            session['credentials']['scopes'] = scopes
+            return google.oauth2.credentials.Credentials(**session['credentials'])
+    except:
+        pass
+
+    if refresh_token := get_refresh_token():
+        if client_config := get_config_from_secret():
             cfg = client_config['web']
             credentials = {
                 'token': None,
@@ -65,10 +77,8 @@ class DoAuth(Resource):
     def get(self):
         print('in /doauth')
 
-        client_config_str = os.getenv('GOOGLE_CLIENT_SECRET', None)
-        if client_config_str:
-            client_config = json.loads(client_config_str)
-            flow = Flow.from_client_config(client_config=client_config, scopes=SCOPES)
+        if client_config := get_config_from_secret():
+            flow = Flow.from_client_config(client_config=client_config, scopes=GOOGLE_SCOPES)
         else:
             return "NO SECRET"
 
@@ -89,8 +99,12 @@ class DoAuth(Resource):
 
         # Store the state so the callback can verify the auth server response.
         session['state'] = state
-
-        return redirect(authorization_url)
+        print(f"redirecting to URL: {authorization_url}")
+        redirect_url = redirect(authorization_url)
+        # redirect_url.access_control_allow_origin = 'http://localhost:3000'
+        # redirect_url.access_control_allow_headers = 'Content-Type,Authorization'
+        # redirect_url.access_control_allow_methods = 'GET,PUT,POST,DELETE,OPTIONS'
+        return redirect_url
 
 @auth_ns.route('/auth')
 class Auth(Resource):
@@ -101,10 +115,8 @@ class Auth(Resource):
         # verified in the authorization server response.
         state = session['state']
 
-        client_config_str = os.getenv('GOOGLE_CLIENT_SECRET', None)
-        if client_config_str:
-            client_config = json.loads(client_config_str)
-            flow = Flow.from_client_config(client_config=client_config, scopes=SCOPES, state=state)
+        if client_config := get_config_from_secret():
+            flow = Flow.from_client_config(client_config=client_config, scopes=GOOGLE_SCOPES, state=state)
         else:
             return "NO SECRET"
         
@@ -128,7 +140,7 @@ class Auth(Resource):
 @auth_ns.route('/status')
 class Status(Resource):
     def get(self):
-        credentials = get_credentials(SCOPES)
+        credentials = get_credentials(GOOGLE_SCOPES)
         if credentials:
             return "logged in"
         else:

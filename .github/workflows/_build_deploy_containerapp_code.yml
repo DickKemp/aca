@@ -2,7 +2,7 @@
 # Build & push azure container app
 #
 
-name: Build Push Container App
+name: __Build & Publish & Push Container App
 
 on:
   workflow_call:
@@ -11,14 +11,13 @@ on:
         required: true
         type: string
     secrets:
-      LTL_CONTAINER_REGISTRY:
+      container_registry:
         required: true
-      LTL_REGISTRY_UN:
+      container_registry_id:
         required: true
-      LTL_REGISTRY_PW:
+      container_registry_pw:
         required: true
-      LTL_AZURE_CREDENTIALS:
-        required: true
+      azure_credentials:
 
 jobs:
 
@@ -28,9 +27,9 @@ jobs:
     
     env:
       VERSION: ${{ github.sha }}
-      CONTAINER_REGISTRY: ${{ secrets.LTL_CONTAINER_REGISTRY }}
-      REGISTRY_UN: ${{ secrets.LTL_REGISTRY_UN }}
-      REGISTRY_PW: ${{ secrets.LTL_REGISTRY_PW  }}
+      CONTAINER_REGISTRY: ${{ secrets.container_registry }}
+      CONTAINER_REGISTRY_ID: ${{ secrets.container_registry_id }}
+      CONTAINER_REGISTRY_PW: ${{ secrets.container_registry_pw }}
     
     steps:
       
@@ -40,27 +39,27 @@ jobs:
       #
       # Builds the Docker image.
       #
-      - name: Build
+      - name: Build image
         run:  | 
           ./scripts/build_image.sh ${{ inputs.app-name }}
 
       #
       # Publishes the Docker image to the container registry.
       #
-      - name: Publish
+      - name: Publish image to container registry
         run:  |
           ./scripts/push_image.sh ${{ inputs.app-name }}
 
       - name: 'Az CLI login'
         uses: Azure/login@v1
         with:
-          creds: ${{ secrets.LTL_AZURE_CREDENTIALS }}
+          creds: ${{ secrets.azure_credentials }}
 
-      - name: 'Deploy Container App'
+      - name: 'Push image to container app environment'
         uses: Azure/cli@v1
         with:
           inlineScript: |
             echo "Installing containerapp extension"
             az extension add -n containerapp
             echo "Starting Deployment"
-            az containerapp update -n ${{ inputs.app-name}} -g ltl-aca-rg -i ${{ secrets.LTL_CONTAINER_REGISTRY }}/${{ inputs.app-name }}:${{ github.sha }} --debug 
+            az containerapp update -n ${{ inputs.app-name}} -g ltl-aca-rg -i ${{ secrets.container_registry }}/${{ inputs.app-name }}:${{ github.sha }} --debug 
