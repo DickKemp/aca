@@ -2,56 +2,55 @@ from flask_restx import Namespace, Resource, reqparse, fields
 from flask import request, url_for, redirect
 import datetime
 import json
+from common.entities.person import PersonEntity
 
 from common.google_credentials import get_credentials
-from common.entities import EntityStore
-pns = Namespace('Persons', description='services manage Person Entity metadata')
-pmodel = pns.model('Person', {})
+from common.entity_store import EntityStore
+ns = Namespace('Persons', description='services manage Person Entity metadata')
+pmodel = ns.model('Person', {})
 
-
-class PersonEntity (dict):
-    key="id"
-    partition="persons"
-    fields=["sms", "email", "aliases", "photos_album"]
-    key_generator=lambda : f"{IDGenerator.gen_id()}"
-
-    def __init__(self, d):
-        dict.__init__(d)
-        for k,v in d.items():
-            self[k] = v
-
-
-
-@pns.route('/')
+@ns.route('/')
 class Persons(Resource):
     ''' '''
-    @pns.doc('get person entities')
+    @ns.doc('get person entities')
     def get(self):
+        headers_str = f"Headers: {request.headers}"
+        print(headers_str)
         # storage will return a list of PersonEntity objects
-        person_storage = EntityStore(PersonEntity)
+        person_storage = EntityStore()
         # get_list() returns a list of PersonEntity instances, which are just Dicts
         # these will automatically be serialized to JSON by the flask framework
-        return person_storage.get_list()
+        people =  person_storage.list_items(PersonEntity())
+        return list(people)
     
-    @pns.doc('create or update a person entity')
-    @pns.expect(pmodel)
+    @ns.doc('create or update a person entity')
+    @ns.expect(pmodel)
     def post(self):
-        person_storage = EntityStore(PersonEntity)        
+        person_storage = EntityStore()        
         pe = PersonEntity(request.get_json())
         person_storage.upsert_item(pe)
-        return { 'id': pe[pe.key] }, 201
+        return { 'id': pe[pe.key_field] }, 201
 
-@pns.route('/<ids>')
-@pns.param('ids', 'comma-separated list of person ids')
+@ns.route('/<ids>')
+@ns.param('ids', 'comma-separated list of person ids')
 class Person(Resource):
     def get(self, ids):
-        person_storage = EntityStore(PersonEntity)
-        return [ person_storage.get_item(id) for id in ids.split(',') ]
+        person_storage = EntityStore()
+        items = [] 
+        for id in ids.split(','):
+            it = person_storage.get_item(PersonEntity({"id": id})) 
+            if it:
+                items.append(it)
 
-    @pns.doc('delete a person')
+        if items:
+            return items
+        else:
+            return 'not found', 404
+
+    @ns.doc('delete a person')
     def delete(self, ids):
-        person_storage = EntityStore(PersonEntity)        
+        person_storage = EntityStore()
         id_list = ids.split(',')
-        person_storage.delete(id_list)
+        person_storage.delete(id_list, PersonEntity)
         return { 'result': id_list }, 204
     

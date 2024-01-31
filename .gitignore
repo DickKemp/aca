@@ -3,7 +3,11 @@
 /utils/*.yaml
 /.vscode
 *.vsdx
+/local
 
+\#*\#
+~*
+*~
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -31,6 +35,9 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+
+Models/
+play/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

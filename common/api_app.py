@@ -1,4 +1,5 @@
-from flask import Flask
+import os
+from flask import Flask, jsonify
 from werkzeug.middleware.proxy_fix import ProxyFix
 from flask_restx import Api
 from flask_cors import CORS   
@@ -8,10 +9,19 @@ import signal
 import sys
 from types import FrameType
 
+from common.table_store import TableStore
+from common.queue_store import QueueStore
+from common.jwt_auth import AuthHandler, AuthError
+
 def create_api_app(namespaces=[], apiname='api', apiversion='1.0', apidescription=''):
     app : Flask = Flask(__name__, static_url_path='', static_folder='static')
     app.wsgi_app = ProxyFix(app.wsgi_app)
     app.secret_key = 'A0Zr98j/3yX R~XHH!jmN]LWX/,?RTxyz'
+        
+    TableStore.initialize(os.getenv('AZURE_STORAGETABLE_CONNECTIONSTRING', None))
+    QueueStore.initialize(os.getenv('AZURE_STORAGETABLE_CONNECTIONSTRING', None))
+    
+    AuthHandler(os.getenv('TENANT_ID', None), os.getenv('AZURE_CLIENT_ID', None))
     
     api = Api(
         title=apiname,
@@ -20,6 +30,10 @@ def create_api_app(namespaces=[], apiname='api', apiversion='1.0', apidescriptio
     )
     for ns in namespaces:
         api.add_namespace(ns)
+
+    @api.errorhandler(AuthError)
+    def handle_auth_error(ex):
+        return { 'message': ex.error['code'], 'description' : ex.error['description'] },ex.status_code
 
     api.init_app(app)
     

@@ -1,0 +1,39 @@
+
+name: Delete Container App (prompts for name)
+
+on:
+  workflow_dispatch:
+    inputs:
+        name:
+            type: choice
+            description: App to delete
+            options: 
+            - photos
+            - feapp
+            - echo
+            - entities
+            - queueprocessor
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    
+    env:
+      VERSION: ${{ github.sha }}
+    
+    steps:
+      
+      - name: 'Az CLI login'
+        uses: Azure/login@v1
+        with:
+          creds: ${{ secrets.azure_credentials }}
+
+      - name: 'delete container app'
+        uses: Azure/cli@v1
+        with:
+          inlineScript: |
+            echo "Installing containerapp extension"
+            az extension add -n containerapp
+            echo "delete"
+            az containerapp delete -n ${{ github.event.inputs.name }} -g ltl-aca-rg -y --debug 

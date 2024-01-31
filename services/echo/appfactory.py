@@ -1,12 +1,13 @@
 import os
 from dotenv import load_dotenv
 from common.api_app import create_api_app
-from feapp import ns as fe_ns
+from echo_routes import ns as echo_ns
 
-API_DEFINITION = {  "namespaces": [fe_ns], 
-                    "apiname": "FE API", 
+
+API_DEFINITION = {  "namespaces": [echo_ns], 
+                    "apiname": "Echo API", 
                     "apiversion": '1.0', 
-                    "apidescription": 'front end apis'
+                    "apidescription": ''
     }
 
 def create_app():

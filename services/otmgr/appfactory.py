@@ -1,12 +1,12 @@
 import os
 from dotenv import load_dotenv
 from common.api_app import create_api_app
-from feapp import ns as fe_ns
+from orch_api_routes import ns as orch_ns
 
-API_DEFINITION = {  "namespaces": [fe_ns], 
-                    "apiname": "FE API", 
+API_DEFINITION = {  "namespaces": [orch_ns], 
+                    "apiname": "Orchestration Manager API", 
                     "apiversion": '1.0', 
-                    "apidescription": 'front end apis'
+                    "apidescription": ''
     }
 
 def create_app():

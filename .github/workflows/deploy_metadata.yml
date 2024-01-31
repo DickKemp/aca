@@ -1,15 +1,13 @@
 # 
 # GitHub Actions workflow.
 #
-# Automatically deploys meta data files to azure fileshare
-#
 
 name: Deploy Metadata files
 
 on:
   push:
     branches: 
-      - main
+      - master
     paths:
       - 'storage/meta/**'
   workflow_dispatch:

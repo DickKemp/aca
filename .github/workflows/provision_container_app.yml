@@ -2,20 +2,31 @@
 # GitHub Actions workflow.
 #
 
-name: Provision Entities Container App Infra
+name: Provision Container App (prompts for name)
 
 on:
   workflow_dispatch:
-
+      inputs:
+          name:
+              type: choice
+              description: Container app to provision
+              options: 
+              - photos
+              - feapp
+              - echo
+              - entities
 jobs:
 
-  call-build-deploy-container-app:
+  call-provision-container-app:
     uses: ./.github/workflows/_provision_containerapp_infra.yml
     with:
-      containerapp_name: entities
-      container_registry_image: entities:latest
+      containerapp_name: ${{ github.event.inputs.name }}
+      container_registry_image: ${{ github.event.inputs.name }}:latest
       containerapp_environment_rg: ltl-aca-rg
       containerapp_environment_name: ltl-aca-env
+      containerapp_template: ./provision_container_app.json
+      containerapp_location: East US 2
+      queue_name: none
 
     secrets:
       container_registry: ${{ secrets.container_registry }}
